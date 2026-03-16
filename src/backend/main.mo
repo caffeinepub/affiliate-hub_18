@@ -3,8 +3,18 @@ import Text "mo:core/Text";
 import Iter "mo:core/Iter";
 import Array "mo:core/Array";
 import Order "mo:core/Order";
+import Principal "mo:core/Principal";
+import Runtime "mo:core/Runtime";
+import Migration "migration";
+import AccessControl "authorization/access-control";
+import MixinAuthorization "authorization/MixinAuthorization";
 
+(with migration = Migration.run)
 actor {
+  // Include Authentication System
+  let accessControlState = AccessControl.initState();
+  include MixinAuthorization(accessControlState);
+
   type Product = {
     id : Nat;
     name : Text;
@@ -22,10 +32,25 @@ actor {
     };
   };
 
+  public type UserProfile = {
+    name : Text;
+  };
+
   let products = Map.empty<Nat, Product>();
+  let userProfiles = Map.empty<Principal, UserProfile>();
+  var nextId = 1;
 
   public shared ({ caller }) func seed() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can seed data");
+    };
+    
+    if (products.size() > 0) {
+      return;
+    };
+    
     products.clear();
+    nextId := 1;
     let sampleProducts : [Product] = [
       {
         id = 1;
@@ -132,6 +157,7 @@ actor {
     for (product in sampleProducts.values()) {
       products.add(product.id, product);
     };
+    nextId := 11;
   };
 
   public query ({ caller }) func getAllProducts() : async [Product] {
@@ -148,5 +174,103 @@ actor {
     products.values().toArray().filter(
       func(product) { product.featured }
     ).sort(Product.compareByName);
+  };
+
+  public shared ({ caller }) func addProduct(
+    name : Text,
+    description : Text,
+    imageUrl : Text,
+    price : Text,
+    category : Text,
+    affiliateLink : Text,
+    featured : Bool,
+  ) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add products");
+    };
+    let product : Product = {
+      id = nextId;
+      name;
+      description;
+      imageUrl;
+      price;
+      category;
+      affiliateLink;
+      featured;
+    };
+    products.add(nextId, product);
+    nextId += 1;
+    product.id;
+  };
+
+  public shared ({ caller }) func updateProduct(
+    id : Nat,
+    name : Text,
+    description : Text,
+    imageUrl : Text,
+    price : Text,
+    category : Text,
+    affiliateLink : Text,
+    featured : Bool,
+  ) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update products");
+    };
+    switch (products.get(id)) {
+      case (null) { false };
+      case ( ? _ ) {
+        let updatedProduct : Product = {
+          id;
+          name;
+          description;
+          imageUrl;
+          price;
+          category;
+          affiliateLink;
+          featured;
+        };
+        products.add(id, updatedProduct);
+        true;
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteProduct(id : Nat) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete products");
+    };
+    switch (products.get(id)) {
+      case (null) { false };
+      case ( ? _ ) {
+        products.remove(id);
+        true;
+      };
+    };
+  };
+
+  public query ({ caller }) func getProductCount() : async Nat {
+    products.size();
+  };
+
+  // User Profile Functions
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access profiles");
+    };
+    userProfiles.get(caller);
+  };
+
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
+    };
+    userProfiles.get(user);
+  };
+
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
+    };
+    userProfiles.add(caller, profile);
   };
 };

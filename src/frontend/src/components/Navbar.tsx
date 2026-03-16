@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, Settings, X } from "lucide-react";
 import { useState } from "react";
 
 interface NavbarProps {
   onNavigate: (section: string) => void;
+  onAdminClick?: () => void;
 }
 
-export function Navbar({ onNavigate }: NavbarProps) {
+export function Navbar({ onNavigate, onAdminClick }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleNav = (section: string) => {
@@ -45,6 +46,18 @@ export function Navbar({ onNavigate }: NavbarProps) {
                 {section.charAt(0).toUpperCase() + section.slice(1)}
               </button>
             ))}
+            {onAdminClick && (
+              <button
+                type="button"
+                onClick={onAdminClick}
+                data-ocid="nav.admin.link"
+                className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                title="Admin Panel"
+              >
+                <Settings className="w-3 h-3" />
+                Admin
+              </button>
+            )}
           </nav>
 
           {/* Mobile menu toggle */}
@@ -77,6 +90,20 @@ export function Navbar({ onNavigate }: NavbarProps) {
                 {section.charAt(0).toUpperCase() + section.slice(1)}
               </button>
             ))}
+            {onAdminClick && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileOpen(false);
+                  onAdminClick();
+                }}
+                data-ocid="nav.admin.link"
+                className="w-full text-left px-2 py-2 flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              >
+                <Settings className="w-3 h-3" />
+                Admin
+              </button>
+            )}
           </div>
         )}
       </div>

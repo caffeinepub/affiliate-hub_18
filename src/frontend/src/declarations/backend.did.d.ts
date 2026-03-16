@@ -20,11 +20,32 @@ export interface Product {
   'affiliateLink' : string,
   'price' : string,
 }
+export interface UserProfile { 'name' : string }
+export type UserRole = { 'admin' : null } |
+  { 'user' : null } |
+  { 'guest' : null };
 export interface _SERVICE {
+  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'addProduct' : ActorMethod<
+    [string, string, string, string, string, string, boolean],
+    bigint
+  >,
+  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'deleteProduct' : ActorMethod<[bigint], boolean>,
   'getAllProducts' : ActorMethod<[], Array<Product>>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getFeaturedProducts' : ActorMethod<[], Array<Product>>,
+  'getProductCount' : ActorMethod<[], bigint>,
   'getProductsByCategory' : ActorMethod<[string], Array<Product>>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'isCallerAdmin' : ActorMethod<[], boolean>,
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'seed' : ActorMethod<[], undefined>,
+  'updateProduct' : ActorMethod<
+    [bigint, string, string, string, string, string, string, boolean],
+    boolean
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];
